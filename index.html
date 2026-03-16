@@ -1,0 +1,314 @@
+<!-- frontend/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediAgent - AI Health Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .disclaimer {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            resize: vertical;
+            transition: border 0.3s;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .upload-area {
+            border: 2px dashed #e0e0e0;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+        .upload-area i {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        #imagePreview {
+            max-width: 100%;
+            max-height: 200px;
+            margin-top: 10px;
+            border-radius: 10px;
+            display: none;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s;
+        }
+        button:hover:not(:disabled) {
+            background: #5a67d8;
+        }
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+        .result h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .result-content {
+            line-height: 1.6;
+            color: #555;
+        }
+        .remove-image {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            🏥 MediAgent
+            <span style="font-size: 14px; color: #667eea;">AI Health Assistant</span>
+        </h1>
+        
+        <div class="disclaimer">
+            ⚕️ IMPORTANT: This AI assistant is for informational purposes only and is not a substitute for professional medical advice. Always consult a healthcare provider for medical concerns.
+        </div>
+
+        <div class="input-group">
+            <label for="symptoms">Describe your symptoms:</label>
+            <textarea id="symptoms" rows="4" placeholder="e.g., I have a headache, fever, and sore throat..."></textarea>
+        </div>
+
+        <div class="upload-area" id="uploadArea">
+            <i>📷</i>
+            <p>Click or drag to upload a medical image</p>
+            <p style="font-size: 12px; color: #999;">Supports: X-rays, skin conditions, rashes, etc.</p>
+            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+        </div>
+        
+        <img id="imagePreview" src="#" alt="Preview">
+        <button class="remove-image" id="removeImage" style="display: none;">Remove Image</button>
+
+        <button id="analyzeBtn">Analyze Symptoms</button>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px;">Analyzing with AI...</p>
+        </div>
+
+        <div class="result" id="result">
+            <h2>Analysis Results</h2>
+            <div class="result-content" id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const symptomsInput = document.getElementById('symptoms');
+        const imageInput = document.getElementById('imageInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const imagePreview = document.getElementById('imagePreview');
+        const removeImageBtn = document.getElementById('removeImage');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const loading = document.getElementById('loading');
+        const result = document.getElementById('result');
+        const resultContent = document.getElementById('resultContent');
+
+        let selectedImage = null;
+
+        // Upload area click handler
+        uploadArea.addEventListener('click', () => {
+            imageInput.click();
+        });
+
+        // Drag and drop handlers
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#667eea';
+            uploadArea.style.background = '#f8f9ff';
+        });
+
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#e0e0e0';
+            uploadArea.style.background = 'white';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#e0e0e0';
+            uploadArea.style.background = 'white';
+            
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                handleImage(file);
+            }
+        });
+
+        // Image input change handler
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleImage(file);
+            }
+        });
+
+        function handleImage(file) {
+            selectedImage = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+                removeImageBtn.style.display = 'block';
+                uploadArea.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        removeImageBtn.addEventListener('click', () => {
+            selectedImage = null;
+            imagePreview.style.display = 'none';
+            removeImageBtn.style.display = 'none';
+            uploadArea.style.display = 'block';
+            imageInput.value = '';
+        });
+
+        analyzeBtn.addEventListener('click', async () => {
+            const symptoms = symptomsInput.value.trim();
+            
+            if (!symptoms && !selectedImage) {
+                alert('Please describe your symptoms or upload an image.');
+                return;
+            }
+
+            // Prepare request data
+            const requestData = {
+                symptoms: symptoms
+            };
+
+            if (selectedImage) {
+                const reader = new FileReader();
+                requestData.image = await new Promise((resolve) => {
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(selectedImage);
+                });
+            }
+
+            // Show loading
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            analyzeBtn.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:5000/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const data = await response.json();
+                
+                // Display result
+                resultContent.innerHTML = data.response.replace(/\n/g, '<br>');
+                result.style.display = 'block';
+            } catch (error) {
+                alert('Error: Could not reach the server. Make sure the backend is running.');
+                console.error(error);
+            } finally {
+                loading.style.display = 'none';
+                analyzeBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
